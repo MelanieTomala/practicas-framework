@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { apiFetch } from "../services/http";
+import { apiFetch, isNetworkError } from "../services/http";
 
 interface PedidoItem {
   id: number;
@@ -90,9 +90,11 @@ const MisPedidos = () => {
       })
       .catch((err) => {
         if (!cancel) {
-          setError(
-            err instanceof Error ? err.message : "Error al cargar tu historial de pedidos"
-          );
+          if (!isNetworkError(err)) {
+            setError(
+              err instanceof Error ? err.message : "Error al cargar tu historial de pedidos"
+            );
+          }
           setLoading(false);
         }
       });
@@ -266,3 +268,4 @@ const MisPedidos = () => {
 };
 
 export default MisPedidos;
+

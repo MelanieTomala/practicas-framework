@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apiFetch, ApiError } from "../services/http";
+import { apiFetch, ApiError, isNetworkError } from "../services/http";
 
 interface PedidoItem {
   id: number;
@@ -114,7 +114,9 @@ const AdminPedidos = () => {
       })
       .catch((err) => {
         if (!cancel) {
-          setError(err instanceof Error ? err.message : "Error al cargar la lista de pedidos");
+          if (!isNetworkError(err)) {
+            setError(err instanceof Error ? err.message : "Error al cargar la lista de pedidos");
+          }
           setLoading(false);
         }
       });
@@ -424,3 +426,4 @@ const AdminPedidos = () => {
 };
 
 export default AdminPedidos;
+

@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react";
-import { apiFetch, ApiError } from "../services/http";
+import { apiFetch, ApiError, isNetworkError } from "../services/http";
 import type { Producto } from "../data/productos";
 
 interface PaginaProductos {
@@ -62,7 +62,9 @@ const AdminProductos = () => {
       })
       .catch((err) => {
         if (!cancel) {
-          setError(err instanceof Error ? err.message : "Error al cargar la lista de productos");
+          if (!isNetworkError(err)) {
+            setError(err instanceof Error ? err.message : "Error al cargar la lista de productos");
+          }
           setLoading(false);
         }
       });
@@ -469,3 +471,4 @@ const AdminProductos = () => {
 };
 
 export default AdminProductos;
+

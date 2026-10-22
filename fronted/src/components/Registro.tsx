@@ -2,7 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../context/auth";
-import { apiFetch, ApiError } from "../services/http";
+import { apiFetch, ApiError, isNetworkError } from "../services/http";
 
 interface RegisterResponse {
   mensaje: string;
@@ -61,7 +61,9 @@ const Registro = () => {
         navigate("/tienda");
       }, 1000);
     } catch (err: unknown) {
-      if (err instanceof ApiError) {
+      if (isNetworkError(err)) {
+        setError("El registro de cuentas requiere conexión a internet. Conectate a una red e intentá nuevamente.");
+      } else if (err instanceof ApiError) {
         setError(err.message);
       } else if (err instanceof Error) {
         setError(err.message);
@@ -197,3 +199,4 @@ const Registro = () => {
 };
 
 export default Registro;
+

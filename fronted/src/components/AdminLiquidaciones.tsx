@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apiFetch, ApiError } from "../services/http";
+import { apiFetch, ApiError, isNetworkError } from "../services/http";
 
 interface DeudaDistribuidor {
   referido_id: number;
@@ -45,7 +45,9 @@ const AdminLiquidaciones = () => {
       })
       .catch((err) => {
         if (!cancel) {
-          setError(err instanceof Error ? err.message : "Error al cargar datos de liquidaciones");
+          if (!isNetworkError(err)) {
+            setError(err instanceof Error ? err.message : "Error al cargar datos de liquidaciones");
+          }
         }
       });
 
@@ -59,7 +61,9 @@ const AdminLiquidaciones = () => {
       })
       .catch((err) => {
         if (!cancel) {
-          setError(err instanceof Error ? err.message : "Error al cargar historial");
+          if (!isNetworkError(err)) {
+            setError(err instanceof Error ? err.message : "Error al cargar historial");
+          }
           setLoading(false);
         }
       });
@@ -312,3 +316,4 @@ const AdminLiquidaciones = () => {
 };
 
 export default AdminLiquidaciones;
+

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apiFetch } from "../services/http";
+import { apiFetch, isNetworkError } from "../services/http";
 import {
   type Referido,
   contarRed,
@@ -142,9 +142,11 @@ const MiRed = () => {
       })
       .catch((err) => {
         if (!cancel) {
-          setError(
-            err instanceof Error ? err.message : "Error al cargar la información de tu red multinivel"
-          );
+          if (!isNetworkError(err)) {
+            setError(
+              err instanceof Error ? err.message : "Error al cargar la información de tu red multinivel"
+            );
+          }
           setLoading(false);
         }
       });
@@ -359,3 +361,4 @@ const MiRed = () => {
 };
 
 export default MiRed;
+

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apiFetch } from "../services/http";
+import { apiFetch, isNetworkError } from "../services/http";
 
 interface ResumenReporte {
   totalVendido?: number;
@@ -56,9 +56,11 @@ const Dashboard = () => {
       })
       .catch((err) => {
         if (!cancel) {
-          setError(
-            err instanceof Error ? err.message : "Error al cargar las métricas del dashboard"
-          );
+          if (!isNetworkError(err)) {
+            setError(
+              err instanceof Error ? err.message : "Error al cargar las métricas del dashboard"
+            );
+          }
           setLoading(false);
         }
       });
@@ -233,3 +235,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

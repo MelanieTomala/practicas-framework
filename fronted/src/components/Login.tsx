@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth, type Rol } from "../context/auth";
-import { apiFetch, ApiError, authenticateOffline, saveOfflineUser } from "../services/http";
+import { apiFetch, ApiError, authenticateOffline, saveOfflineUser, isNetworkError } from "../services/http";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import { BotonInstalarApp } from "./BotonInstalarApp";
 import { MelanieMark } from "./MelanieLogo";
@@ -41,7 +41,7 @@ const Login = () => {
 
           saveOfflineUser(data.email, data.rol === "admin" ? "admin" : "cliente", data.token);
         } catch (fetchErr: unknown) {
-          if (!navigator.onLine || (fetchErr instanceof TypeError && fetchErr.message.includes("fetch"))) {
+          if (isNetworkError(fetchErr)) {
             data = authenticateOffline(email, password);
           } else {
             throw fetchErr;
@@ -174,3 +174,4 @@ const Login = () => {
 };
 
 export default Login;
+

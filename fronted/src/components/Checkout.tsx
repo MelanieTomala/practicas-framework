@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/cart';
-import { apiFetch, ApiError } from '../services/http';
+import { apiFetch, ApiError, isNetworkError } from '../services/http';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 interface DatosEnvio {
@@ -87,7 +87,9 @@ const Checkout = () => {
       clearCart();
       navigate("/confirmacion", { state: { pedido: pedidoConfirmado } });
     } catch (err: unknown) {
-      if (err instanceof ApiError) {
+      if (isNetworkError(err)) {
+        setError("Sin conexión a internet. El pedido no se procesó. Conectate a una red e intentá nuevamente.");
+      } else if (err instanceof ApiError) {
         setError(`[HTTP ${err.status}] ${err.message}`);
       } else if (err instanceof Error) {
         setError(err.message);
@@ -248,3 +250,4 @@ const Checkout = () => {
 };
 
 export default Checkout;
+

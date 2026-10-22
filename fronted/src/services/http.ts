@@ -29,11 +29,19 @@ export const getStoredSession = (): SessionData | null => {
 };
 
 export const saveStoredSession = (session: SessionData): void => {
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  try {
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  } catch {
+    // Manejo de excepciones de almacenamiento
+  }
 };
 
 export const clearStoredSession = (): void => {
-  localStorage.removeItem(SESSION_STORAGE_KEY);
+  try {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // Manejo de excepciones
+  }
 };
 
 export const saveOfflineUser = (email: string, rol: 'admin' | 'cliente', token: string): void => {
@@ -58,16 +66,18 @@ export const authenticateOffline = (
 ): { email: string; rol: 'admin' | 'cliente'; token: string } => {
   const normEmail = email.trim().toLowerCase();
 
-  // 1. Cuentas de prueba preconfiguradas para pruebas offline del evaluador
+  // 1. Cuentas de prueba preconfiguradas para pruebas offline
   if (normEmail === 'admin@upse.edu.ec' && password === '123456') {
     const offlineToken = `offline-jwt-admin-${Date.now()}`;
     saveOfflineUser(normEmail, 'admin', offlineToken);
+    saveStoredSession({ usuario: { email: normEmail, rol: 'admin' }, token: offlineToken });
     return { email: normEmail, rol: 'admin', token: offlineToken };
   }
 
   if (normEmail === 'cliente@upse.edu.ec' && password === '123456') {
     const offlineToken = `offline-jwt-cliente-${Date.now()}`;
     saveOfflineUser(normEmail, 'cliente', offlineToken);
+    saveStoredSession({ usuario: { email: normEmail, rol: 'cliente' }, token: offlineToken });
     return { email: normEmail, rol: 'cliente', token: offlineToken };
   }
 
@@ -78,6 +88,7 @@ export const authenticateOffline = (
       const vault: Record<string, OfflineUserVault> = JSON.parse(raw);
       const cached = vault[normEmail];
       if (cached) {
+        saveStoredSession({ usuario: { email: cached.email, rol: cached.rol }, token: cached.token });
         return { email: cached.email, rol: cached.rol, token: cached.token };
       }
     }
@@ -99,6 +110,31 @@ export class ApiError extends Error {
     this.details = details;
   }
 }
+
+/**
+ * Detecta si un error proviene de falta de conexión a internet o falla de red (Firefox NetworkError, etc.)
+ */
+export const isNetworkError = (err: unknown): boolean => {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return true;
+  }
+  if (err instanceof ApiError && err.status === 0) {
+    return true;
+  }
+  if (err instanceof TypeError || err instanceof Error) {
+    const msg = (err.message || '').toLowerCase();
+    return (
+      msg.includes('networkerror') ||
+      msg.includes('failed to fetch') ||
+      msg.includes('load failed') ||
+      msg.includes('network request failed') ||
+      msg.includes('sin conexión') ||
+      msg.includes('offline') ||
+      msg.includes('connection refused')
+    );
+  }
+  return false;
+};
 
 // Normalización de BASE_URL para evitar URLs relativas al protocolo ("//api/...")
 const rawBase = import.meta.env.VITE_API_URL ?? '';
@@ -129,10 +165,22 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     url = `${cleanBase}${cleanEndpoint}`;
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (err: unknown) {
+    if (isNetworkError(err)) {
+      throw new ApiError(
+        0,
+        'Sin conexión a internet. Los datos sincronizados se actualizarán al volver a estar online.',
+        err
+      );
+    }
+    throw err;
+  }
 
   if (!response.ok) {
     let message = response.statusText;

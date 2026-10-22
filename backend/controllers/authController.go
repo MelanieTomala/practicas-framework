@@ -79,7 +79,7 @@ func (ctrl *AuthController) Login(c *fiber.Ctx) error {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   strconv.Itoa(user.ID),
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(2 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(30 * 24 * time.Hour)),
 		},
 	}
 
@@ -169,7 +169,7 @@ func (ctrl *AuthController) Register(c *fiber.Ctx) error {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   strconv.Itoa(user.ID),
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(2 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(30 * 24 * time.Hour)),
 		},
 	}
 	tokenObj := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
