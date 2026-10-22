@@ -1,9 +1,7 @@
 // src/components/Carrito.tsx
-// Carrito de compras con controles de cantidad (Tema 5):
-// - incrementQuantity / decrementQuantity desde el contexto
-// - Enlace al flujo de checkout
+// Carrito de compras con controles de cantidad y touch target mobile-first >= 44px
 import { Link } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/cart';
 
 const Carrito = () => {
   const {
@@ -23,7 +21,7 @@ const Carrito = () => {
           <p className="text-slate-500">Tu carrito está vacío actualmente.</p>
           <Link
             to="/catalogo"
-            className="inline-block mt-4 bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition"
+            className="inline-block mt-4 min-h-[44px] bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition"
           >
             Explorar Catálogo
           </Link>
@@ -35,7 +33,7 @@ const Carrito = () => {
             {cart.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between bg-white p-4 rounded-lg border border-slate-200 shadow-sm gap-4"
+                className="flex flex-wrap sm:flex-nowrap items-center justify-between bg-white p-4 rounded-lg border border-slate-200 shadow-sm gap-4"
               >
                 <div className="flex items-center gap-4">
                   <img
@@ -53,22 +51,22 @@ const Carrito = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  {/* Control de cantidad */}
+                <div className="flex items-center gap-4 ml-auto sm:ml-0">
+                  {/* Control de cantidad con botones touch target >= 44px */}
                   <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
                     <button
                       onClick={() => decrementQuantity(item.id)}
-                      className="px-3 py-2 text-slate-600 hover:bg-slate-100 transition"
+                      className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-600 hover:bg-slate-100 transition"
                       aria-label="Disminuir cantidad"
                     >
                       −
                     </button>
-                    <span className="px-3 py-2 text-sm font-semibold text-slate-800 border-x border-slate-200">
+                    <span className="min-h-[44px] flex items-center justify-center px-3 text-sm font-semibold text-slate-800 border-x border-slate-200">
                       {item.cantidad}
                     </span>
                     <button
                       onClick={() => incrementQuantity(item.id)}
-                      className="px-3 py-2 text-slate-600 hover:bg-slate-100 transition"
+                      className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-600 hover:bg-slate-100 transition"
                       aria-label="Aumentar cantidad"
                     >
                       +
@@ -81,8 +79,9 @@ const Carrito = () => {
 
                   <button
                     onClick={() => removeFromCart(item.id)}
-                    className="text-red-500 hover:text-red-700 transition"
+                    className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-500 hover:text-red-700 transition"
                     title="Eliminar producto"
+                    aria-label="Eliminar producto"
                   >
                     🗑️
                   </button>
@@ -106,7 +105,7 @@ const Carrito = () => {
             </div>
             <Link
               to="/checkout"
-              className="block w-full text-center bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition"
+              className="block w-full min-h-[44px] flex items-center justify-center text-center bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition"
             >
               Proceder al Pago
             </Link>

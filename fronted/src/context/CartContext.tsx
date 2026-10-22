@@ -1,57 +1,23 @@
 // src/context/CartContext.tsx
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+// Proveedor del carrito con persistencia en localStorage por usuario
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Producto } from '../data/productos';
-import { useAuth } from './AuthContext';
+import { useAuth } from './auth';
+import { CartContext, type CartItem } from './cart';
 
-// 1. Elemento del carrito: un producto + la cantidad seleccionada
-export interface CartItem extends Producto {
-  cantidad: number;
-}
+const CART_STORAGE_PREFIX = 'multicatalogo_carrito_';
 
-interface CartContextType {
-  cart: CartItem[];
-  addToCart: (producto: Producto) => void;
-  removeFromCart: (id: number) => void;
-  incrementQuantity: (id: number) => void;
-  decrementQuantity: (id: number) => void;
-  clearCart: () => void;
-  totalItems: number;
-  totalPrice: number;
-}
-
-// 2. Prefijo de la clave de persistencia en localStorage.
-// Se completa con el correo del usuario para que CADA CUENTA tenga su propio carrito.
-const CART_STORAGE_PREFIX = "multicatalogo_carrito_";
-
-// 3. Creamos el contexto indicando que puede ser CartContextType o undefined
-const CartContext = createContext<CartContextType | undefined>(undefined);
-
-// 4. Hook personalizado con validación de tipo
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error("useCart debe ser usado dentro de un CartProvider");
-  }
-  return context;
-};
-
-// 5. Tipamos los props del Provider
 interface CartProviderProps {
   children: ReactNode;
 }
 
-// 6. El Provider
 export const CartProvider = ({ children }: CartProviderProps) => {
   const { user } = useAuth();
 
-  // Clave de almacenamiento según el usuario autenticado.
-  // App.tsx remonta este provider con key={user?.email} al cambiar de cuenta,
-  // por lo que el estado siempre se inicializa con el carrito de ESTE usuario.
   const storageKey = user
     ? `${CART_STORAGE_PREFIX}${user.email}`
     : `${CART_STORAGE_PREFIX}anonimo`;
 
-  // Inicializamos el estado leyendo el carrito guardado del usuario actual
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -61,7 +27,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     }
   });
 
-  // Persistimos el carrito del usuario en cada cambio (Tema 5: carrito persistente)
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(cart));
   }, [cart, storageKey]);
@@ -98,11 +63,10 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         .map((item) =>
           item.id === id ? { ...item, cantidad: item.cantidad - 1 } : item
         )
-        .filter((item) => item.cantidad > 0) // si llega a 0, se elimina
+        .filter((item) => item.cantidad > 0)
     );
   };
 
-  // Vacía el carrito tras confirmar el pedido
   const clearCart = () => {
     setCart([]);
   };

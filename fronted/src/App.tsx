@@ -11,23 +11,29 @@ import Carrito from './components/Carrito';
 import Checkout from './components/Checkout';
 import Confirmacion from './components/Confirmacion';
 import Login from './components/Login';
+import Registro from './components/Registro';
+import AdminProductos from './components/AdminProductos';
+import AdminPedidos from './components/AdminPedidos';
+import AdminLiquidaciones from './components/AdminLiquidaciones';
+import MisPedidos from './components/MisPedidos';
+import OfflineBanner from './components/OfflineBanner';
+import PwaInstallPrompt from './components/PwaInstallPrompt';
 import { CartProvider } from './context/CartContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/auth';
 
 // Componente para proteger las rutas privadas: exige estar autenticado
 const ProtectedRoute = () => {
   const { isAuthenticated } = useAuth();
 
-  // Si no está autenticado, lo enviamos al login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // Si está autenticado, renderiza las rutas hijas (Outlet)
   return <Outlet />;
 };
 
-// Componente para rutas exclusivas del administrador (Tema 5: roles)
+// Componente para rutas exclusivas del administrador
 const AdminRoute = () => {
   const { isAuthenticated, user } = useAuth();
 
@@ -35,7 +41,6 @@ const AdminRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Si el usuario no es admin, lo enviamos a la tienda (su vista por defecto)
   if (user?.rol !== 'admin') {
     return <Navigate to="/tienda" replace />;
   }
@@ -43,8 +48,7 @@ const AdminRoute = () => {
   return <Outlet />;
 };
 
-// Proveedor intermedio del carrito: al cambiar de usuario se remonta con key,
-// de modo que cada cuenta lea y persista SU propio carrito en localStorage.
+// Proveedor intermedio del carrito: se remonta con key por cada usuario
 const CartBoundary = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   return (
@@ -56,35 +60,42 @@ const CartBoundary = ({ children }: { children: ReactNode }) => {
 
 function App() {
   return (
-    <AuthProvider> {/* Proveedor de Autenticación */}
-      <CartBoundary> {/* Proveedor del Carrito (uno por usuario) */}
+    <AuthProvider>
+      <CartBoundary>
         <BrowserRouter>
+          <OfflineBanner />
           <Routes>
-            {/* Ruta pública */}
+            {/* Rutas públicas */}
             <Route path="/login" element={<Login />} />
+            <Route path="/registro" element={<Registro />} />
 
             {/* Rutas protegidas (requieren login) */}
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Layout />}>
-                {/* Solo administrador: Dashboard y Red multinivel */}
+                {/* Solo Administrador */}
                 <Route element={<AdminRoute />}>
                   <Route index element={<Dashboard />} />
-                  <Route path="mi-red" element={<MiRed />} />
+                  <Route path="admin/productos" element={<AdminProductos />} />
+                  <Route path="admin/pedidos" element={<AdminPedidos />} />
+                  <Route path="admin/liquidaciones" element={<AdminLiquidaciones />} />
                 </Route>
 
-                {/* Ambos roles: flujo de compra en línea */}
+                {/* Accesible por Ambos Roles */}
                 <Route path="tienda" element={<Storefront />} />
                 <Route path="catalogo" element={<Catalogo />} />
                 <Route path="producto/:id" element={<DetalleProducto />} />
                 <Route path="carrito" element={<Carrito />} />
                 <Route path="checkout" element={<Checkout />} />
                 <Route path="confirmacion" element={<Confirmacion />} />
+                <Route path="mis-pedidos" element={<MisPedidos />} />
+                <Route path="mi-red" element={<MiRed />} />
               </Route>
             </Route>
 
-            {/* Ruta comodín para capturar 404 y redirigir */}
+            {/* Redirección por defecto */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <PwaInstallPrompt />
         </BrowserRouter>
       </CartBoundary>
     </AuthProvider>

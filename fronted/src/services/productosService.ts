@@ -1,21 +1,25 @@
 // src/services/productosService.ts
-// Capa de servicios del catálogo.
-// Actualmente devuelve datos de ejemplo (mock) simulando una llamada asíncrona.
-// En la Unidad 2, estas funciones se reemplazarán por fetch a GET /api/productos
-// sin necesidad de modificar los componentes que las consumen.
+// Capa de servicios del catálogo conectada al backend Go/Fiber
+import { apiFetch } from './http';
+import { productosMock, type Producto } from '../data/productos';
 
-import { productosMock, type Producto } from "../data/productos";
-
-// Simula GET /api/productos (lista completa)
-export const getProductos = (): Promise<Producto[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(productosMock), 400);
-  });
+// Obtiene la lista completa de productos desde el backend con fallback local
+export const getProductos = async (): Promise<Producto[]> => {
+  try {
+    const data = await apiFetch<Producto[]>('/api/productos');
+    return data && data.length > 0 ? data : productosMock;
+  } catch (err) {
+    console.warn('API no disponible para catálogo, usando datos locales:', err);
+    return productosMock;
+  }
 };
 
-// Simula GET /api/productos/:id (detalle de un producto)
-export const getProductoById = (id: number): Promise<Producto | undefined> => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(productosMock.find((p) => p.id === id)), 300);
-  });
+// Obtiene el detalle de un producto específico por ID desde el backend
+export const getProductoById = async (id: number): Promise<Producto | undefined> => {
+  try {
+    return await apiFetch<Producto>(`/api/productos/${id}`);
+  } catch (err) {
+    console.warn(`API no disponible para producto ${id}, usando datos locales:`, err);
+    return productosMock.find((p) => p.id === id);
+  }
 };

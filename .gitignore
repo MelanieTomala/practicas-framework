@@ -1,0 +1,15 @@
+# Environment files
+.env
+.env.local
+*.local
+
+# Editor & Tooling
+.windsurfrules
+*.windsurfrules
+mcp_config.json
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

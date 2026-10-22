@@ -1,7 +1,6 @@
-// src/components/Navbar.tsx
 import { Link, useNavigate } from "react-router-dom";
-import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/cart";
+import { useAuth } from "../context/auth";
 
 // Definimos la interfaz para las props
 interface NavbarProps {
@@ -70,10 +69,23 @@ const Navbar = ({ toggleSidebar }: NavbarProps) => {
               />
             </div>
 
-            <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+            <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-1">
+              <Link
+                to="/mis-pedidos"
+                className="w-full min-h-[44px] flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition font-medium"
+              >
+                Mis Pedidos
+              </Link>
+              <Link
+                to="/mi-red"
+                className="w-full min-h-[44px] flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition font-medium"
+              >
+                Mi Red & Comisiones
+              </Link>
+              <div className="border-t border-slate-100 my-1" />
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-4 py-2 text-sm text-red-600 font-semibold hover:bg-red-50 rounded-md transition-colors"
+                className="w-full min-h-[44px] flex items-center px-4 py-2 text-sm text-red-600 font-semibold hover:bg-red-50 rounded-md transition-colors"
               >
                 Cerrar Sesión
               </button>

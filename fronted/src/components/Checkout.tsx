@@ -1,11 +1,10 @@
 // src/components/Checkout.tsx
-// Flujo de checkout simulado (Tema 5):
-// - Formulario de envío con validación básica
-// - Resumen del pedido en tiempo real
-// - Simula el procesamiento del pago y redirige a /confirmacion
+// Flujo de checkout transaccional conectado a POST /api/checkout con manejo de ApiError
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/cart';
+import { apiFetch, ApiError } from '../services/http';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 interface DatosEnvio {
   nombre: string;
@@ -21,6 +20,7 @@ const METODOS_PAGO = ["Tarjeta de crédito", "Transferencia bancaria", "Efectivo
 const Checkout = () => {
   const { cart, totalPrice, clearCart } = useCart();
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
 
   const [datos, setDatos] = useState<DatosEnvio>({
     nombre: "",
@@ -31,6 +31,7 @@ const Checkout = () => {
     metodoPago: METODOS_PAGO[0],
   });
   const [procesando, setProcesando] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Si el carrito está vacío, mostramos un aviso en lugar del formulario
   if (cart.length === 0) {
@@ -48,33 +49,69 @@ const Checkout = () => {
     setDatos((prev) => ({ ...prev, [campo]: valor }));
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!isOnline) {
+      setError("No se puede procesar el pedido sin conexión a internet. Por favor conéctate a una red e intenta nuevamente.");
+      return;
+    }
+
     setProcesando(true);
+    setError(null);
 
-    // Simulamos el procesamiento del pago con un pequeño retraso
-    setTimeout(() => {
-      const pedido = {
-        numero: `MC-${Date.now().toString().slice(-6)}`,
-        items: cart.map((item) => ({
-          nombre: item.nombre,
-          cantidad: item.cantidad,
-          precio: item.precio,
-        })),
-        total: totalPrice,
-        cliente: { nombre: datos.nombre, email: datos.email, ciudad: datos.ciudad },
-        fecha: new Date().toLocaleString("es-EC"),
-      };
+    const payload = {
+      cliente: {
+        nombre: datos.nombre,
+        email: datos.email,
+        direccion: datos.direccion,
+        ciudad: datos.ciudad,
+        telefono: datos.telefono,
+      },
+      metodoPago: datos.metodoPago,
+      items: cart.map((item) => ({
+        id: item.id,
+        nombre: item.nombre,
+        cantidad: item.cantidad,
+        precio: item.precio,
+      })),
+      total: totalPrice,
+    };
 
-      // Vaciamos el carrito y pasamos los datos del pedido a la confirmación
+    try {
+      const pedidoConfirmado = await apiFetch<unknown>("/api/checkout", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
       clearCart();
-      navigate("/confirmacion", { state: { pedido } });
-    }, 1200);
+      navigate("/confirmacion", { state: { pedido: pedidoConfirmado } });
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(`[HTTP ${err.status}] ${err.message}`);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Error de comunicación con el microservicio de pagos.");
+      }
+    } finally {
+      setProcesando(false);
+    }
   };
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-slate-800 mb-6">Finalizar Compra</h1>
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg text-red-700 shadow-sm flex items-start gap-3">
+          <span className="text-xl">⚠️</span>
+          <div>
+            <p className="font-bold">Error en la transacción (ROLLBACK)</p>
+            <p className="text-sm mt-0.5">{error}</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ===== FORMULARIO DE ENVÍO ===== */}
@@ -168,12 +205,18 @@ const Checkout = () => {
             </div>
           </div>
 
+          {!isOnline && (
+            <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-center font-medium">
+              Estás en modo sin conexión. La confirmación del pedido requiere conexión activa con el servidor.
+            </p>
+          )}
+
           <button
             type="submit"
-            disabled={procesando}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={procesando || !isOnline}
+            className="w-full min-h-[44px] bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {procesando ? "Procesando pago..." : "Confirmar Pedido"}
+            {!isOnline ? "Sin conexión (pedido bloqueado)" : procesando ? "Procesando pago..." : "Confirmar Pedido"}
           </button>
         </form>
 

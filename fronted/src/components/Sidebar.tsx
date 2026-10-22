@@ -1,20 +1,18 @@
 // src/components/Sidebar.tsx
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/auth";
 
-// NUEVO: Agregamos la función a la interfaz de props
 interface SidebarProps {
   isCollapsed: boolean;
   isMobileOpen: boolean;
   closeMobileMenu: () => void;
 }
 
-// Definimos las opciones de navegación según el rol (Tema 5)
 interface NavItem {
   to: string;
   label: string;
   title: string;
-  icon: string; // ruta del icono SVG (stroke)
+  icon: string; // SVG path d
   soloAdmin?: boolean;
 }
 
@@ -39,11 +37,38 @@ const NAV_ITEMS: NavItem[] = [
     icon: "M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z",
   },
   {
+    to: "/mis-pedidos",
+    label: "Mis Pedidos",
+    title: "Mis Pedidos",
+    icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
+  },
+  {
     to: "/mi-red",
-    label: "Mi Red",
-    title: "Mi Red",
-    soloAdmin: true,
+    label: "Mi Red & Comisiones",
+    title: "Mi Red y Comisiones",
     icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z",
+  },
+  // Opciones exclusivas de Administrador
+  {
+    to: "/admin/productos",
+    label: "Gestión Catálogo",
+    title: "Gestión de Catálogo",
+    soloAdmin: true,
+    icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
+  },
+  {
+    to: "/admin/pedidos",
+    label: "Gestión Pedidos",
+    title: "Gestión de Pedidos",
+    soloAdmin: true,
+    icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+  },
+  {
+    to: "/admin/liquidaciones",
+    label: "Liquidaciones MLM",
+    title: "Liquidaciones MLM",
+    soloAdmin: true,
+    icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
   },
 ];
 
@@ -51,7 +76,6 @@ const Sidebar = ({ isCollapsed, isMobileOpen, closeMobileMenu }: SidebarProps) =
   const { user } = useAuth();
   const { pathname } = useLocation();
 
-  // Filtramos las opciones según el rol del usuario
   const items = NAV_ITEMS.filter((item) => !item.soloAdmin || user?.rol === "admin");
 
   return (
@@ -64,35 +88,46 @@ const Sidebar = ({ isCollapsed, isMobileOpen, closeMobileMenu }: SidebarProps) =
         ${isCollapsed ? "md:w-20" : "md:w-64"}
       `}
     >
-      <div className={`p-4 md:p-6 text-xl font-bold border-b border-slate-700 flex items-center ${isCollapsed ? 'md:justify-center' : 'justify-start'} whitespace-nowrap`}>
+      <div
+        className={`p-4 md:p-6 text-xl font-bold border-b border-indigo-800 flex items-center ${
+          isCollapsed ? "md:justify-center" : "justify-start"
+        } whitespace-nowrap`}
+      >
         <span className="md:hidden">MultiCatálogo</span>
         <span className="hidden md:inline">{isCollapsed ? "MC" : "MultiCatálogo"}</span>
       </div>
 
-      <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
+      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
         {items.map((item) => {
-          // Resaltamos la opción activa según la ruta actual
           const esActivo =
-            item.to === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.to);
+            item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
 
           return (
             <Link
               key={item.to}
               to={item.to}
               onClick={closeMobileMenu}
-              className={`flex items-center gap-3 p-3 rounded transition ${
+              className={`flex items-center gap-3 p-3 min-h-[44px] rounded-lg transition text-sm font-medium ${
                 esActivo
-                  ? "bg-indigo-600 text-white"
-                  : "hover:bg-slate-800"
-              } ${isCollapsed ? 'md:justify-center' : ''}`}
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-indigo-100 hover:bg-white/10"
+              } ${isCollapsed ? "md:justify-center" : ""}`}
               title={item.title}
             >
-              <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+              <svg
+                className="w-5 h-5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d={item.icon}
+                />
               </svg>
-              <span className={`whitespace-nowrap ${isCollapsed ? 'md:hidden' : ''}`}>
+              <span className={`whitespace-nowrap ${isCollapsed ? "md:hidden" : ""}`}>
                 {item.label}
               </span>
             </Link>
@@ -100,9 +135,9 @@ const Sidebar = ({ isCollapsed, isMobileOpen, closeMobileMenu }: SidebarProps) =
         })}
       </nav>
 
-      <div className="p-3 border-t border-slate-700 text-xs text-slate-300">
+      <div className="p-3 border-t border-indigo-800 text-xs text-indigo-200">
         {isCollapsed ? (
-          <p className="text-center uppercase">{user?.rol}</p>
+          <p className="text-center uppercase font-bold">{user?.rol}</p>
         ) : (
           <p>
             Conectado como <span className="font-semibold uppercase">{user?.rol}</span>
