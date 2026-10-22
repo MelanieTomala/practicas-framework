@@ -1,6 +1,7 @@
 // src/components/Sidebar.tsx
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth";
+import { MelanieMark } from "./MelanieLogo";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -12,7 +13,7 @@ interface NavItem {
   to: string;
   label: string;
   title: string;
-  icon: string; // SVG path d
+  icon: string;
   soloAdmin?: boolean;
 }
 
@@ -48,7 +49,6 @@ const NAV_ITEMS: NavItem[] = [
     title: "Mi Red y Comisiones",
     icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z",
   },
-  // Opciones exclusivas de Administrador
   {
     to: "/admin/productos",
     label: "Gestión Catálogo",
@@ -73,30 +73,57 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const Sidebar = ({ isCollapsed, isMobileOpen, closeMobileMenu }: SidebarProps) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   const items = NAV_ITEMS.filter((item) => !item.soloAdmin || user?.rol === "admin");
+
+  const handleCerrarSesion = () => {
+    closeMobileMenu();
+    logout();
+    navigate("/login");
+  };
 
   return (
     <aside
       className={`
-        fixed inset-y-0 left-0 z-50 transform bg-gradient-to-b from-violet-900 via-purple-900 to-indigo-900 text-white flex flex-col transition-all duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-50 transform bg-[#24124D] text-white flex flex-col transition-transform duration-300 ease-in-out border-r border-[#371F76]
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         w-64
         md:relative md:translate-x-0
         ${isCollapsed ? "md:w-20" : "md:w-64"}
       `}
     >
+      {/* Cabecera con Logotipo Melanie y botón de cerrar móvil */}
       <div
-        className={`p-4 md:p-6 text-xl font-bold border-b border-indigo-800 flex items-center ${
-          isCollapsed ? "md:justify-center" : "justify-start"
-        } whitespace-nowrap`}
+        className={`p-4 md:p-5 border-b border-[#371F76] flex items-center justify-between whitespace-nowrap`}
       >
-        <span className="md:hidden">MultiCatálogo</span>
-        <span className="hidden md:inline">{isCollapsed ? "MC" : "MultiCatálogo"}</span>
+        <div className={`flex items-center gap-3 ${isCollapsed ? "md:justify-center md:w-full" : ""}`}>
+          <MelanieMark className="w-8 h-8 shrink-0" />
+          <div className={`flex flex-col leading-tight ${isCollapsed ? "md:hidden" : ""}`}>
+            <span className="font-black text-sm tracking-wider text-white uppercase font-sans">
+              MELANIE
+            </span>
+            <span className="font-bold text-[9px] tracking-widest text-[#FFA399] uppercase">
+              MULTICATÁLOGO
+            </span>
+          </div>
+        </div>
+
+        {/* Botón de cierre en móviles (permite cerrar el menú sin cambiar de pantalla) */}
+        <button
+          onClick={closeMobileMenu}
+          className="md:hidden p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#341B7F] transition cursor-pointer"
+          aria-label="Cerrar menú lateral"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
+      {/* Navegación Principal */}
       <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
         {items.map((item) => {
           const esActivo =
@@ -109,9 +136,9 @@ const Sidebar = ({ isCollapsed, isMobileOpen, closeMobileMenu }: SidebarProps) =
               onClick={closeMobileMenu}
               className={`flex items-center gap-3 p-3 min-h-[44px] rounded-lg transition text-sm font-medium ${
                 esActivo
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "text-indigo-100 hover:bg-white/10"
-              } ${isCollapsed ? "md:justify-center" : ""}`}
+                  ? "bg-[#341B7F] text-white border-l-4 border-[#F05043] pl-2 font-semibold shadow-xs"
+                  : "text-slate-200 hover:bg-[#341B7F]/60 hover:text-white"
+              } ${isCollapsed ? "md:justify-center md:pl-3" : ""}`}
               title={item.title}
             >
               <svg
@@ -135,14 +162,38 @@ const Sidebar = ({ isCollapsed, isMobileOpen, closeMobileMenu }: SidebarProps) =
         })}
       </nav>
 
-      <div className="p-3 border-t border-indigo-800 text-xs text-indigo-200">
-        {isCollapsed ? (
-          <p className="text-center uppercase font-bold">{user?.rol}</p>
-        ) : (
-          <p>
-            Conectado como <span className="font-semibold uppercase">{user?.rol}</span>
-          </p>
-        )}
+      {/* Pie con Estado del Usuario y Botón de Cerrar Sesión Directo (100% amigable para celulares) */}
+      <div className="p-3 border-t border-[#371F76] space-y-2">
+        <div className="text-xs text-slate-300">
+          {isCollapsed ? (
+            <p className="text-center uppercase font-bold text-[10px] text-[#FFA399] hidden md:block">
+              {user?.rol}
+            </p>
+          ) : (
+            <div className="flex items-center justify-between pb-1">
+              <span className="truncate text-slate-400 text-xs">{user?.email}</span>
+              <span className="font-bold uppercase text-[10px] bg-[#341B7F] px-2 py-0.5 rounded text-[#FFA399] border border-[#43258E]">
+                {user?.rol}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Botón Cerrar Sesión en Sidebar */}
+        <button
+          onClick={handleCerrarSesion}
+          className={`w-full min-h-[44px] flex items-center gap-2.5 px-3 py-2 rounded-lg text-red-300 hover:text-white hover:bg-red-500/20 font-bold text-xs transition cursor-pointer border border-transparent hover:border-red-500/30 ${
+            isCollapsed ? "md:justify-center md:px-0" : ""
+          }`}
+          title="Cerrar sesión"
+        >
+          <svg className="w-4 h-4 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span className={`whitespace-nowrap ${isCollapsed ? "md:hidden" : ""}`}>
+            Cerrar Sesión
+          </span>
+        </button>
       </div>
     </aside>
   );

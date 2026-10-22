@@ -17,7 +17,6 @@ import AdminPedidos from './components/AdminPedidos';
 import AdminLiquidaciones from './components/AdminLiquidaciones';
 import MisPedidos from './components/MisPedidos';
 import OfflineBanner from './components/OfflineBanner';
-import PwaInstallPrompt from './components/PwaInstallPrompt';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/auth';
@@ -95,7 +94,6 @@ function App() {
             {/* Redirección por defecto */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          <PwaInstallPrompt />
         </BrowserRouter>
       </CartBoundary>
     </AuthProvider>

@@ -11,7 +11,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o server main.go
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/server .
-COPY --from=builder /app/.env .
+COPY --from=builder /app/.env* ./
 
 EXPOSE 3000
 

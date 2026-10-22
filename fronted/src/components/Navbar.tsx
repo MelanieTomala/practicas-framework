@@ -1,8 +1,8 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/cart";
 import { useAuth } from "../context/auth";
 
-// Definimos la interfaz para las props
 interface NavbarProps {
   toggleSidebar: () => void;
 }
@@ -10,86 +10,130 @@ interface NavbarProps {
 const Navbar = ({ toggleSidebar }: NavbarProps) => {
   const { totalItems } = useCart();
   const { logout, user } = useAuth();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    setUserMenuOpen(false);
     logout();
     navigate("/login");
   };
 
+  const handleCloseMenu = () => {
+    setUserMenuOpen(false);
+  };
+
   return (
-    <header className="h-16 bg-violet-50 border-b border-violet-200 flex items-center justify-between px-4 md:px-8">
+    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 relative z-30">
       <div className="flex items-center gap-2 md:gap-4">
-        {/* Botón Hamburguesa siempre visible */}
+        {/* Botón Hamburguesa */}
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded-md hover:bg-violet-100 transition text-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          aria-label="Alternar menú"
+          className="p-2.5 rounded-lg hover:bg-slate-100 transition text-[#371F76] focus:outline-none focus:ring-2 focus:ring-[#371F76]/30 cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+          aria-label="Alternar menú lateral"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <h2 className="text-violet-800 font-medium text-base md:text-lg hidden sm:block">
-          {user?.rol === "admin" ? "Panel de Administración" : "Tienda MultiCatálogo"}
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-slate-900 font-bold text-base md:text-lg hidden sm:block">
+            {user?.rol === "admin" ? "Panel de Administración" : "Tienda Melanie"}
+          </h2>
+          <span className="hidden lg:inline-block px-2.5 py-0.5 bg-[#FFF1F0] border border-[#FFD0CC] text-[#D93829] rounded-full text-[10px] font-bold uppercase tracking-wider">
+            MultiCatálogo
+          </span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4 md:gap-6">
+      <div className="flex items-center gap-3 md:gap-5">
         <Link
           to="/carrito"
-          className="relative p-2 hover:bg-violet-100 rounded-full transition"
+          className="relative p-2.5 hover:bg-slate-100 rounded-full transition text-slate-700 hover:text-[#371F76] min-h-[44px] min-w-[44px] flex items-center justify-center"
+          aria-label="Ver carrito de compras"
         >
           <span className="text-xl">🛒</span>
           {totalItems > 0 && (
-            <span className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full transform translate-x-1 -translate-y-1">
+            <span className="absolute top-0.5 right-0.5 bg-[#F05043] text-white text-xs font-black w-5 h-5 flex items-center justify-center rounded-full transform translate-x-1 -translate-y-1 shadow-xs">
               {totalItems}
             </span>
           )}
         </Link>
 
         <div className="flex items-center gap-2 md:gap-4">
-          <span className="text-xs md:text-sm text-violet-600 hidden sm:block">{user?.email}</span>
+          <span className="text-xs md:text-sm text-slate-600 font-medium hidden sm:block">
+            {user?.email}
+          </span>
           <span
-            className={`hidden md:inline-block text-xs font-semibold px-2 py-1 rounded-full uppercase ${
+            className={`hidden md:inline-block text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
               user?.rol === "admin"
-                ? "bg-amber-100 text-amber-700"
-                : "bg-indigo-100 text-indigo-700"
+                ? "bg-amber-100 text-amber-800 border border-amber-300"
+                : "bg-[#371F76]/10 text-[#371F76] border border-[#371F76]/20"
             }`}
           >
             {user?.rol}
           </span>
 
-          <div className="relative group cursor-pointer pb-2">
-            <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden border border-slate-300 flex items-center justify-center">
-              <img
-                src="https://fastly.picsum.photos/id/64/4326/2884.jpg?hmac=9_SzX666YRpR_fOyYStXpfSiJ_edO3ghlSRnH2w09Kg"
-                alt="Avatar del usuario"
-                className="w-full h-full object-cover"
-              />
-            </div>
+          {/* Menú de Usuario con toggle explícito por clic/tap (100% compatible con celulares) */}
+          <div className="relative">
+            <button
+              onClick={() => setUserMenuOpen((prev) => !prev)}
+              type="button"
+              className="w-10 h-10 rounded-full bg-[#371F76] text-white font-bold text-xs flex items-center justify-center border-2 border-slate-200 shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#371F76]/40"
+              aria-label="Abrir menú de usuario"
+              aria-expanded={userMenuOpen}
+            >
+              {user?.email ? user.email.charAt(0).toUpperCase() : "M"}
+            </button>
 
-            <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-1">
-              <Link
-                to="/mis-pedidos"
-                className="w-full min-h-[44px] flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition font-medium"
-              >
-                Mis Pedidos
-              </Link>
-              <Link
-                to="/mi-red"
-                className="w-full min-h-[44px] flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition font-medium"
-              >
-                Mi Red & Comisiones
-              </Link>
-              <div className="border-t border-slate-100 my-1" />
-              <button
-                onClick={handleLogout}
-                className="w-full min-h-[44px] flex items-center px-4 py-2 text-sm text-red-600 font-semibold hover:bg-red-50 rounded-md transition-colors"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
+            {/* Backdrop invisible para cerrar el menú al hacer tap afuera */}
+            {userMenuOpen && (
+              <div
+                className="fixed inset-0 z-40 bg-transparent"
+                onClick={handleCloseMenu}
+                aria-hidden="true"
+              />
+            )}
+
+            {/* Dropdown del Usuario */}
+            {userMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-4 py-2 border-b border-slate-100 sm:hidden">
+                  <p className="text-xs text-slate-400 font-medium truncate">Conectado como</p>
+                  <p className="text-xs font-bold text-slate-800 truncate">{user?.email}</p>
+                  <span className="inline-block mt-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-[#371F76]/10 text-[#371F76]">
+                    {user?.rol}
+                  </span>
+                </div>
+
+                <Link
+                  to="/mis-pedidos"
+                  onClick={handleCloseMenu}
+                  className="w-full min-h-[44px] flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition font-medium"
+                >
+                  Mis Pedidos
+                </Link>
+                <Link
+                  to="/mi-red"
+                  onClick={handleCloseMenu}
+                  className="w-full min-h-[44px] flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition font-medium"
+                >
+                  Mi Red & Comisiones
+                </Link>
+
+                <div className="border-t border-slate-100 my-1" />
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full min-h-[44px] flex items-center gap-2 px-4 py-2 text-sm text-red-600 font-bold hover:bg-red-50 transition cursor-pointer"
+                >
+                  <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span>Cerrar Sesión</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

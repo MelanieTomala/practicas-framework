@@ -12,6 +12,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: [
         'favicon.svg',
+        'melanie-logo.jpg',
         'apple-touch-icon.png',
         'icons.svg',
         'pwa-64x64.png',
@@ -20,15 +21,21 @@ export default defineConfig({
         'maskable-icon-512x512.png'
       ],
       manifest: {
-        name: 'MultiCatálogo — MLM & Cosmética',
-        short_name: 'MultiCatálogo',
+        name: 'MultiCatálogo Melanie — MLM & Cosmética',
+        short_name: 'Melanie',
         description: 'Plataforma de ventas por catálogo y red multinivel',
-        theme_color: '#7c3aed',
+        theme_color: '#371F76',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        related_applications: [
+          {
+            platform: 'webapp',
+            url: 'https://multicatalogo.melanie.software/manifest.webmanifest'
+          }
+        ],
         icons: [
           {
             src: '/pwa-64x64.png',
@@ -54,7 +61,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,jpg,jpeg}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

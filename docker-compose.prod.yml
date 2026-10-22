@@ -1,0 +1,91 @@
+# ---------------------------------------------------------------------------
+# Stack de produccion para MultiCatalogo Melanie
+# ---------------------------------------------------------------------------
+name: multicatalogo-melanie
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defini POSTGRES_PASSWORD en el .env}
+      POSTGRES_DB: ${POSTGRES_DB:-multicatalogo}
+    volumes:
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./backend/database/002_checkout.sql:/docker-entrypoint-initdb.d/02_checkout.sql:ro
+      - ./backend/database/003_seguridad.sql:/docker-entrypoint-initdb.d/03_seguridad.sql:ro
+      - ./backend/database/004_backoffice.sql:/docker-entrypoint-initdb.d/04_backoffice.sql:ro
+      - pgdata_melanie:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-multicatalogo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - multicatalogo_melanie
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata_melanie:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - multicatalogo_melanie
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      APP_ENV: prod
+      JWT_SECRET: ${JWT_SECRET:-secret-multicatalogo-key-2026}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-admin}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Defini POSTGRES_PASSWORD en el .env}
+      DB_NAME: ${POSTGRES_DB:-multicatalogo}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - multicatalogo_melanie
+
+  frontend:
+    build:
+      context: ./fronted
+      args:
+        VITE_API_URL: "/"
+    restart: unless-stopped
+    ports:
+      # Expuesto solo en 127.0.0.1:8081 para no chocar con el 8080 de Torres
+      - "127.0.0.1:${FRONTEND_PORT:-8081}:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - multicatalogo_melanie
+
+volumes:
+  pgdata_melanie:
+  redisdata_melanie:
+
+networks:
+  multicatalogo_melanie:
+    name: multicatalogo_melanie
