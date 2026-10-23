@@ -1,34 +1,44 @@
-// src/components/Registro.tsx
-import { useState, type FormEvent } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useState, useEffect, type FormEvent } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../context/auth";
-import { apiFetch, ApiError, isNetworkError } from "../services/http";
+import { apiFetch, ApiError, isNetworkError, saveOfflineUser } from "../services/http";
 
 interface RegisterResponse {
   mensaje: string;
-  usuario: {
-    id: number;
-    email: string;
-    nombre: string;
-    rol: string;
-    codigo: string;
+  token?: string;
+  email?: string;
+  nombre?: string;
+  rol?: string;
+  codigoReferido?: string;
+  usuario?: {
+    id?: number;
+    email?: string;
+    nombre?: string;
+    rol?: string;
+    codigo?: string;
+    codigoReferido?: string;
     referido_id?: number;
   };
 }
 
 const Registro = () => {
   const [searchParams] = useSearchParams();
-  const initialRef = searchParams.get("ref") || "";
+  const refFromUrl = (searchParams.get("ref") || searchParams.get("codigo") || "").trim().toUpperCase();
 
   const [nombre, setNombre] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [codigoReferido, setCodigoReferido] = useState<string>(initialRef);
+  const [codigoReferido, setCodigoReferido] = useState<string>(refFromUrl);
   const [error, setError] = useState<string>("");
   const [successMsg, setSuccessMsg] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  const navigate = useNavigate();
+  useEffect(() => {
+    if (refFromUrl) {
+      setCodigoReferido(refFromUrl);
+    }
+  }, [refFromUrl]);
+
   const { login } = useAuth();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -37,6 +47,8 @@ const Registro = () => {
     setError("");
     setSuccessMsg("");
 
+    const cleanRef = codigoReferido.trim().toUpperCase();
+
     try {
       const regData = await apiFetch<RegisterResponse>("/api/register", {
         method: "POST",
@@ -44,22 +56,38 @@ const Registro = () => {
           nombre: nombre.trim(),
           email: email.trim().toLowerCase(),
           password,
-          codigo_referido: codigoReferido.trim().toUpperCase(),
+          ref: cleanRef,
+          codigo_referido: cleanRef,
         }),
       });
 
-      setSuccessMsg(`¡Registro exitoso! Tu código de referido es ${regData.usuario.codigo}. Iniciando sesión...`);
+      const codigoNuevo = regData.usuario?.codigo || regData.codigoReferido || "";
+      setSuccessMsg(
+        codigoNuevo
+          ? `¡Registro exitoso! Tu código de referido es ${codigoNuevo}. Iniciando sesión...`
+          : "¡Registro exitoso! Iniciando sesión..."
+      );
 
-      const loginData = await apiFetch<{ token: string; email: string; rol: string }>("/api/login", {
-        method: "POST",
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
-      });
+      // Si /api/register ya emitió el token JWT, iniciamos sesión de inmediato
+      const authToken = regData.token;
+      const authEmail = regData.email || regData.usuario?.email || email.trim().toLowerCase();
+      const authRol = (regData.rol || regData.usuario?.rol || "cliente") === "admin" ? "admin" : "cliente";
 
-      login({ email: loginData.email, rol: loginData.rol === "admin" ? "admin" : "cliente" }, loginData.token);
+      if (authToken) {
+        saveOfflineUser(authEmail, authRol, authToken);
+        login({ email: authEmail, rol: authRol }, authToken);
+      } else {
+        const loginData = await apiFetch<{ token: string; email: string; rol: string }>("/api/login", {
+          method: "POST",
+          body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        });
+        const rolFinal = loginData.rol === "admin" ? "admin" : "cliente";
+        saveOfflineUser(loginData.email, rolFinal, loginData.token);
+        login({ email: loginData.email, rol: rolFinal }, loginData.token);
+      }
 
-      setTimeout(() => {
-        navigate("/tienda");
-      }, 1000);
+      // Refresco total y navegación limpia a /tienda
+      window.location.replace("/tienda");
     } catch (err: unknown) {
       if (isNetworkError(err)) {
         setError("El registro de cuentas requiere conexión a internet. Conectate a una red e intentá nuevamente.");
@@ -160,9 +188,9 @@ const Registro = () => {
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Código de Referido / Patrocinador
               </label>
-              {initialRef && (
+              {refFromUrl && (
                 <span className="text-[10px] bg-[#FFF1F0] text-[#D93829] font-bold px-2 py-0.5 rounded-full border border-[#FFD0CC]">
-                  Invitación detectada
+                  Invitación detectada ({refFromUrl})
                 </span>
               )}
             </div>

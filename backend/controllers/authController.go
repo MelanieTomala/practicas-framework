@@ -182,6 +182,15 @@ func (ctrl *AuthController) Register(c *fiber.Ctx) error {
 		"rol":            user.Rol,
 		"codigoReferido": codigoRef,
 		"mensaje":        "Usuario registrado exitosamente",
+		"usuario": fiber.Map{
+			"id":             user.ID,
+			"email":          user.Email,
+			"nombre":         user.Nombre,
+			"rol":            user.Rol,
+			"codigo":         codigoRef,
+			"codigoReferido": codigoRef,
+			"referido_id":    user.ReferidoID,
+		},
 	})
 }
 

@@ -114,6 +114,47 @@ const NodoReferido = ({ nodo }: { nodo: Referido }) => {
   );
 };
 
+// Helper seguro para copiar al portapapeles con múltiples capas de compatibilidad
+async function copiarAlPortapapeles(texto: string): Promise<boolean> {
+  if (!texto) return false;
+
+  // 1. Intentar API moderna de Clipboard
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    } catch {
+      // Continuar con fallback
+    }
+  }
+
+  // 2. Fallback con elemento textarea fuera de pantalla
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = texto;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    textArea.setAttribute("readonly", "");
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const exito = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    if (exito) return true;
+  } catch {
+    // Continuar con fallback interactivo
+  }
+
+  // 3. Fallback interactivo si el navegador bloquea la acción automática
+  try {
+    window.prompt("Copia tu enlace con Ctrl+C / Cmd+C:", texto);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const MiRed = () => {
   const [arbol, setArbol] = useState<Referido | null>(null);
   const [codigoReferido, setCodigoReferido] = useState<string>("");
@@ -122,7 +163,8 @@ const MiRed = () => {
   const [totalPagado, setTotalPagado] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
-  const [copiado, setCopiado] = useState<boolean>(false);
+  const [copiadoEnlace, setCopiadoEnlace] = useState<boolean>(false);
+  const [copiadoCodigo, setCopiadoCodigo] = useState<boolean>(false);
 
   useEffect(() => {
     let cancel = false;
@@ -156,11 +198,45 @@ const MiRed = () => {
     };
   }, []);
 
-  const handleCopiarEnlace = () => {
-    const enlace = `${window.location.origin}/registro?ref=${codigoReferido}`;
-    navigator.clipboard.writeText(enlace);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2500);
+  const enlaceInvitacion = codigoReferido
+    ? `${window.location.origin}/registro?ref=${encodeURIComponent(codigoReferido)}`
+    : "";
+
+  const handleCopiarEnlace = async () => {
+    if (!enlaceInvitacion) return;
+    const ok = await copiarAlPortapapeles(enlaceInvitacion);
+    if (ok) {
+      setCopiadoEnlace(true);
+      setTimeout(() => setCopiadoEnlace(false), 2500);
+    }
+  };
+
+  const handleCopiarCodigo = async () => {
+    if (!codigoReferido) return;
+    const ok = await copiarAlPortapapeles(codigoReferido);
+    if (ok) {
+      setCopiadoCodigo(true);
+      setTimeout(() => setCopiadoCodigo(false), 2500);
+    }
+  };
+
+  const handleCompartir = async () => {
+    if (!enlaceInvitacion) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "MultiCatálogo Melanie - Únete a mi red",
+          text: `¡Hola! Únete a mi red de distribuidores en MultiCatálogo Melanie usando mi código: ${codigoReferido}`,
+          url: enlaceInvitacion,
+        });
+      } catch (err: unknown) {
+        if ((err as Error).name !== "AbortError") {
+          handleCopiarEnlace();
+        }
+      }
+    } else {
+      handleCopiarEnlace();
+    }
   };
 
   const totalDevengado = totalPendiente + totalPagado;
@@ -186,36 +262,115 @@ const MiRed = () => {
       )}
 
       {/* Banner de Invitación con Enlace Copiable */}
-      <div className="bg-gradient-to-r from-indigo-700 via-purple-700 to-indigo-800 rounded-xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <span className="text-xs uppercase tracking-wider font-bold text-indigo-200">
-            Tu Enlace de Afiliación
-          </span>
-          <h2 className="text-xl font-bold mt-1">Invita y Expande tu Red</h2>
-          <p className="text-sm text-indigo-100 mt-1">
-            Tu código de patrocinador es:{" "}
-            <span className="font-mono font-bold bg-white/20 px-2 py-0.5 rounded">
-              {codigoReferido || "CARGANDO..."}
-            </span>
-          </p>
-        </div>
+      <div className="bg-gradient-to-r from-indigo-800 via-indigo-700 to-purple-800 rounded-2xl p-6 md:p-8 text-white shadow-lg border border-indigo-600/30">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-xs rounded-full border border-white/20 text-xs font-semibold uppercase tracking-wider text-indigo-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Tu Enlace de Afiliación Oficial
+            </div>
+            <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+              Invita distribuidores y haz crecer tu red
+            </h2>
+            <p className="text-sm text-indigo-100/90 leading-relaxed">
+              Comparte tu enlace personal o tu código de patrocinador. Quienes se registren desde este enlace quedarán vinculados automáticamente a tu red multinivel, generando tus comisiones en cada nivel.
+            </p>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleCopiarEnlace}
-            disabled={!codigoReferido}
-            className="min-h-[44px] px-5 py-2.5 bg-white text-indigo-700 font-bold rounded-lg hover:bg-indigo-50 transition shadow-sm flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+            <div className="flex items-center gap-2 pt-2">
+              <span className="text-xs text-indigo-200 font-medium">Tu código único:</span>
+              <span className="font-mono font-black text-sm bg-white/20 px-3 py-1 rounded-md tracking-wider border border-white/20 text-white">
+                {codigoReferido || "CARGANDO..."}
+              </span>
+              {codigoReferido && (
+                <button
+                  type="button"
+                  onClick={handleCopiarCodigo}
+                  title="Copiar solo el código"
+                  className="text-xs bg-white/15 hover:bg-white/25 text-white px-2.5 py-1 rounded-md transition font-medium flex items-center gap-1 cursor-pointer"
+                >
+                  {copiadoCodigo ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-emerald-300 font-bold">¡Código copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                      </svg>
+                      <span>Copiar código</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 flex flex-col gap-3 w-full lg:max-w-md">
+            <label className="text-xs font-semibold text-indigo-100 uppercase tracking-wider block">
+              Enlace de Registro Directo
+            </label>
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                readOnly
+                value={enlaceInvitacion || "Generando enlace..."}
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+                className="w-full px-3.5 py-2.5 bg-black/25 text-white font-mono text-xs rounded-lg border border-white/20 focus:outline-hidden focus:ring-2 focus:ring-white/40 select-all pr-10"
               />
-            </svg>
-            {copiado ? "¡Enlace Copiado!" : "Copiar Enlace de Referido"}
-          </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopiarEnlace}
+                disabled={!codigoReferido}
+                className={`flex-1 min-h-[44px] px-4 py-2.5 font-bold rounded-lg transition shadow-sm flex items-center justify-center gap-2 cursor-pointer text-sm ${
+                  copiadoEnlace
+                    ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                    : "bg-white text-indigo-900 hover:bg-indigo-50"
+                }`}
+              >
+                {copiadoEnlace ? (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>¡Enlace Copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 text-indigo-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                      />
+                    </svg>
+                    <span>Copiar Enlace de Referido</span>
+                  </>
+                )}
+              </button>
+
+              {"share" in navigator && (
+                <button
+                  type="button"
+                  onClick={handleCompartir}
+                  disabled={!codigoReferido}
+                  className="min-h-[44px] px-4 py-2.5 bg-indigo-500/40 hover:bg-indigo-500/60 text-white font-semibold rounded-lg transition border border-white/20 flex items-center justify-center gap-2 cursor-pointer text-sm"
+                  title="Compartir en WhatsApp, redes o apps"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  <span>Compartir</span>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
