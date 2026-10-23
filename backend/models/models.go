@@ -10,10 +10,11 @@ type LoginRequest struct {
 
 // RegisterRequest define los campos necesarios para crear una nueva cuenta y nodo MLM
 type RegisterRequest struct {
-	Nombre   string `json:"nombre"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Ref      string `json:"ref,omitempty"`
+	Nombre         string `json:"nombre"`
+	Email          string `json:"email"`
+	Password       string `json:"password"`
+	Ref            string `json:"ref,omitempty"`
+	CodigoReferido string `json:"codigo_referido,omitempty"`
 }
 
 // Producto define un artículo del catálogo completo
@@ -38,14 +39,15 @@ type APIError struct {
 
 // Usuario representa una cuenta registrada en el sistema
 type Usuario struct {
-	ID         int    `json:"id"`
-	Nombre     string `json:"nombre"`
-	Email      string `json:"email"`
-	Password   string `json:"-"`
-	Rol        string `json:"rol"`
-	Activo     bool   `json:"activo"`
-	ReferidoID *int   `json:"referido_id,omitempty"`
-	CreadoEn   string `json:"creado_en,omitempty"`
+	ID             int     `json:"id"`
+	Nombre         string  `json:"nombre"`
+	Email          string  `json:"email"`
+	Password       string  `json:"-"`
+	Rol            string  `json:"rol"`
+	Activo         bool    `json:"activo"`
+	ReferidoID     *int    `json:"referido_id,omitempty"`
+	CodigoReferido *string `json:"codigo_referido,omitempty"`
+	CreadoEn       string  `json:"creado_en,omitempty"`
 }
 
 // Referido define un nodo de la red multinivel
@@ -70,10 +72,13 @@ type ClienteDatos struct {
 
 // ItemPedido representa cada producto y cantidad dentro de una orden
 type ItemPedido struct {
-	ProductoID int     `json:"id,omitempty"`
-	Nombre     string  `json:"nombre"`
-	Cantidad   int     `json:"cantidad"`
-	Precio     float64 `json:"precio"`
+	ProductoID     int     `json:"id,omitempty"`
+	Nombre         string  `json:"nombre"`
+	ProductoNombre string  `json:"producto_nombre,omitempty"`
+	Cantidad       int     `json:"cantidad"`
+	Precio         float64 `json:"precio"`
+	PrecioUnitario float64 `json:"precio_unitario,omitempty"`
+	Subtotal       float64 `json:"subtotal,omitempty"`
 }
 
 // CheckoutRequest estructura la petición para procesar una compra transaccional
@@ -96,6 +101,7 @@ type PedidoResponse struct {
 	Total      float64      `json:"total"`
 	Estado     string       `json:"estado"`
 	Fecha      string       `json:"fecha"`
+	CreadoEn   string       `json:"creado_en,omitempty"`
 	Mensaje    string       `json:"mensaje,omitempty"`
 }
 

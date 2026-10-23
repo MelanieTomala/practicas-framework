@@ -15,6 +15,7 @@ import Registro from './components/Registro';
 import AdminProductos from './components/AdminProductos';
 import AdminPedidos from './components/AdminPedidos';
 import AdminLiquidaciones from './components/AdminLiquidaciones';
+import AdminUsuarios from './components/AdminUsuarios';
 import MisPedidos from './components/MisPedidos';
 import OfflineBanner from './components/OfflineBanner';
 import { CartProvider } from './context/CartContext';
@@ -77,6 +78,7 @@ function App() {
                   <Route path="admin/productos" element={<AdminProductos />} />
                   <Route path="admin/pedidos" element={<AdminPedidos />} />
                   <Route path="admin/liquidaciones" element={<AdminLiquidaciones />} />
+                  <Route path="admin/usuarios" element={<AdminUsuarios />} />
                 </Route>
 
                 {/* Accesible por Ambos Roles */}

@@ -195,6 +195,9 @@ func (r *PostgresRepository) RegistrarUsuario(req *models.RegisterRequest) (*mod
 	var nivel int = 1
 
 	refCode := strings.ToUpper(strings.TrimSpace(req.Ref))
+	if refCode == "" {
+		refCode = strings.ToUpper(strings.TrimSpace(req.CodigoReferido))
+	}
 	if refCode != "" {
 		var pID int
 		var pNivel int
@@ -277,9 +280,10 @@ func (r *PostgresRepository) ListarUsuarios(page, limit int) (*models.Pagina[mod
 	}
 
 	query := `
-		SELECT id, COALESCE(nombre, ''), email, rol, COALESCE(activo, true), referido_id, creado_en::text
-		FROM usuarios
-		ORDER BY id DESC
+		SELECT u.id, COALESCE(u.nombre, ''), u.email, u.rol, COALESCE(u.activo, true), u.referido_id, r.codigo, COALESCE(u.creado_en::text, '')
+		FROM usuarios u
+		LEFT JOIN referidos r ON u.referido_id = r.id
+		ORDER BY u.id ASC
 		LIMIT $1 OFFSET $2
 	`
 	rows, err := r.db.Query(query, limit, offset)
@@ -291,9 +295,11 @@ func (r *PostgresRepository) ListarUsuarios(page, limit int) (*models.Pagina[mod
 	usuarios := make([]models.Usuario, 0)
 	for rows.Next() {
 		var u models.Usuario
-		if err := rows.Scan(&u.ID, &u.Nombre, &u.Email, &u.Rol, &u.Activo, &u.ReferidoID, &u.CreadoEn); err != nil {
+		var codRef *string
+		if err := rows.Scan(&u.ID, &u.Nombre, &u.Email, &u.Rol, &u.Activo, &u.ReferidoID, &codRef, &u.CreadoEn); err != nil {
 			return nil, err
 		}
+		u.CodigoReferido = codRef
 		usuarios = append(usuarios, u)
 	}
 
@@ -583,10 +589,13 @@ func (r *PostgresRepository) CrearPedido(req *models.CheckoutRequest, authEmail 
 			return nil, fmt.Errorf("error al insertar item '%s': %w", item.nombre, err)
 		}
 		itemsResponse[i] = models.ItemPedido{
-			ProductoID: item.productoID,
-			Nombre:     item.nombre,
-			Cantidad:   item.cantidad,
-			Precio:     item.precio,
+			ProductoID:     item.productoID,
+			Nombre:         item.nombre,
+			ProductoNombre: item.nombre,
+			Cantidad:       item.cantidad,
+			Precio:         item.precio,
+			PrecioUnitario: item.precio,
+			Subtotal:       item.precio * float64(item.cantidad),
 		}
 	}
 
@@ -639,6 +648,7 @@ func (r *PostgresRepository) CrearPedido(req *models.CheckoutRequest, authEmail 
 		Total:      req.Total,
 		Estado:     "pendiente",
 		Fecha:      fecha.Format("02/01/2006 15:04:05"),
+		CreadoEn:   fecha.Format(time.RFC3339),
 		Mensaje:    "Pedido procesado y confirmado con éxito",
 	}, nil
 }
@@ -679,6 +689,7 @@ func (r *PostgresRepository) ObtenerPedidosUsuario(usuarioID int, email string, 
 			return nil, err
 		}
 		p.Fecha = fecha.Format("02/01/2006 15:04:05")
+		p.CreadoEn = fecha.Format(time.RFC3339)
 
 		// Cargar items
 		itemsRows, err := r.db.Query("SELECT producto_id, nombre, cantidad, precio FROM pedido_items WHERE pedido_id = $1", p.ID)
@@ -691,6 +702,9 @@ func (r *PostgresRepository) ObtenerPedidosUsuario(usuarioID int, email string, 
 					if prodID != nil {
 						it.ProductoID = *prodID
 					}
+					it.ProductoNombre = it.Nombre
+					it.PrecioUnitario = it.Precio
+					it.Subtotal = it.Precio * float64(it.Cantidad)
 					items = append(items, it)
 				}
 			}
@@ -724,8 +738,13 @@ func (r *PostgresRepository) ObtenerTodosLosPedidos(estado string, page, limit i
 	whereClause := ""
 	args := []interface{}{}
 	if strings.TrimSpace(estado) != "" {
-		whereClause = "WHERE estado = $1"
-		args = append(args, strings.TrimSpace(estado))
+		st := strings.TrimSpace(estado)
+		if st == "en_preparacion" || st == "preparando" {
+			whereClause = "WHERE (estado = 'preparando' OR estado = 'en_preparacion')"
+		} else {
+			whereClause = "WHERE estado = $1"
+			args = append(args, st)
+		}
 	}
 
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM pedidos %s", whereClause)
@@ -763,6 +782,7 @@ func (r *PostgresRepository) ObtenerTodosLosPedidos(estado string, page, limit i
 			return nil, err
 		}
 		p.Fecha = fecha.Format("02/01/2006 15:04:05")
+		p.CreadoEn = fecha.Format(time.RFC3339)
 
 		itemsRows, err := r.db.Query("SELECT producto_id, nombre, cantidad, precio FROM pedido_items WHERE pedido_id = $1", p.ID)
 		if err == nil {
@@ -774,6 +794,9 @@ func (r *PostgresRepository) ObtenerTodosLosPedidos(estado string, page, limit i
 					if prodID != nil {
 						it.ProductoID = *prodID
 					}
+					it.ProductoNombre = it.Nombre
+					it.PrecioUnitario = it.Precio
+					it.Subtotal = it.Precio * float64(it.Cantidad)
 					items = append(items, it)
 				}
 			}
@@ -811,6 +834,7 @@ func (r *PostgresRepository) ObtenerPedidoPorID(id int) (*models.PedidoResponse,
 		return nil, err
 	}
 	p.Fecha = fecha.Format("02/01/2006 15:04:05")
+	p.CreadoEn = fecha.Format(time.RFC3339)
 
 	itemsRows, err := r.db.Query("SELECT producto_id, nombre, cantidad, precio FROM pedido_items WHERE pedido_id = $1", p.ID)
 	if err == nil {
@@ -822,6 +846,9 @@ func (r *PostgresRepository) ObtenerPedidoPorID(id int) (*models.PedidoResponse,
 				if prodID != nil {
 					it.ProductoID = *prodID
 				}
+				it.ProductoNombre = it.Nombre
+				it.PrecioUnitario = it.Precio
+				it.Subtotal = it.Precio * float64(it.Cantidad)
 				items = append(items, it)
 			}
 		}
@@ -834,12 +861,16 @@ func (r *PostgresRepository) ObtenerPedidoPorID(id int) (*models.PedidoResponse,
 
 func (r *PostgresRepository) ActualizarEstadoPedido(id int, nuevoEstado string) error {
 	nuevoEstado = strings.ToLower(strings.TrimSpace(nuevoEstado))
+	if nuevoEstado == "en_preparacion" {
+		nuevoEstado = "preparando"
+	}
 	estadosValidos := map[string]bool{
-		"pendiente":  true,
-		"preparando": true,
-		"enviado":    true,
-		"entregado":  true,
-		"cancelado":  true,
+		"pendiente":      true,
+		"preparando":     true,
+		"en_preparacion": true,
+		"enviado":        true,
+		"entregado":      true,
+		"cancelado":      true,
 	}
 	if !estadosValidos[nuevoEstado] {
 		return ErrTransicionInvalida
