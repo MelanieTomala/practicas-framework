@@ -3,21 +3,25 @@ import { Link } from "react-router-dom";
 import { apiFetch, isNetworkError } from "../services/http";
 
 interface PedidoItem {
-  id: number;
-  pedido_id: number;
-  producto_id: number;
-  producto_nombre: string;
+  id?: number;
+  pedido_id?: number;
+  producto_id?: number;
+  producto_nombre?: string;
+  nombre?: string;
   cantidad: number;
-  precio_unitario: number;
-  subtotal: number;
+  precio_unitario?: number;
+  precio?: number;
+  subtotal?: number;
 }
 
 interface Pedido {
   id: number;
   usuario_id?: number;
+  numero?: string;
   total: number;
-  estado: "pendiente" | "en_preparacion" | "enviado" | "entregado" | "cancelado";
-  creado_en: string;
+  estado: string;
+  creado_en?: string;
+  fecha?: string;
   cliente: {
     nombre: string;
     email: string;
@@ -46,6 +50,12 @@ const ESTADOS_CONFIG: Record<
     border: "border-amber-200",
   },
   en_preparacion: {
+    label: "En Preparación",
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+    border: "border-blue-200",
+  },
+  preparando: {
     label: "En Preparación",
     bg: "bg-blue-50",
     text: "text-blue-700",
@@ -159,10 +169,15 @@ const MisPedidos = () => {
           {pedidos.map((pedido) => {
             const estadoCfg =
               ESTADOS_CONFIG[pedido.estado] ?? ESTADOS_CONFIG.pendiente;
-            const fechaFormateada = new Date(pedido.creado_en).toLocaleString("es-EC", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            });
+            const fechaRaw = pedido.creado_en || pedido.fecha;
+            const fechaFormateada = fechaRaw && typeof fechaRaw === 'string' && fechaRaw.includes('/')
+              ? fechaRaw
+              : fechaRaw
+                ? new Date(fechaRaw).toLocaleString("es-EC", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })
+                : "Reciente";
 
             return (
               <div
@@ -200,22 +215,27 @@ const MisPedidos = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {pedido.items?.map((item) => (
-                        <tr key={item.id}>
-                          <td className="py-2.5 font-medium text-slate-800">
-                            {item.producto_nombre}
-                          </td>
-                          <td className="py-2.5 text-center text-slate-600">
-                            {item.cantidad}
-                          </td>
-                          <td className="py-2.5 text-right text-slate-600">
-                            ${item.precio_unitario.toFixed(2)}
-                          </td>
-                          <td className="py-2.5 text-right font-semibold text-slate-900">
-                            ${item.subtotal.toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
+                      {pedido.items?.map((item, idx) => {
+                        const nombre = item.producto_nombre || item.nombre || "Producto";
+                        const unitario = item.precio_unitario ?? item.precio ?? 0;
+                        const subtotal = item.subtotal ?? (unitario * item.cantidad);
+                        return (
+                          <tr key={item.id || idx}>
+                            <td className="py-2.5 font-medium text-slate-800">
+                              {nombre}
+                            </td>
+                            <td className="py-2.5 text-center text-slate-600">
+                              {item.cantidad}
+                            </td>
+                            <td className="py-2.5 text-right text-slate-600">
+                              ${unitario.toFixed(2)}
+                            </td>
+                            <td className="py-2.5 text-right font-semibold text-slate-900">
+                              ${subtotal.toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
